@@ -294,7 +294,7 @@ export default function Home() {
               Join thousands of teams using DataVerse AI to make smarter decisions. Start your free trial today — no credit card required.
             </p>
             <div className="relative mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
-              <a href={isLoggedIn ? "#" : "/signup"} className="w-full rounded-xl bg-white px-8 py-3.5 text-base font-semibold text-[#2563EB] shadow-lg transition-all hover:bg-gray-50 sm:w-auto">
+              <a href={isLoggedIn ? "/dashboard" : "/signup"} className="w-full rounded-xl bg-white px-8 py-3.5 text-base font-semibold text-[#2563EB] shadow-lg transition-all hover:bg-gray-50 sm:w-auto">
                 {isLoggedIn ? "Go to Dashboard" : "Create Free Account"}
               </a>
               <a href="#features" className="w-full rounded-xl border border-white/30 px-8 py-3.5 text-base font-semibold text-white transition-all hover:bg-white/10 sm:w-auto">
