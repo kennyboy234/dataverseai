@@ -1,8 +1,7 @@
-// backend\src\routes\index.ts
-
 import { Router } from "express";
 
 import authRoutes from "../modules/auth/auth.routes.js";
+import aiRoutes from "../modules/ai/ai.routes.js";
 
 import { API_VERSION } from "../utils/constants.js";
 
@@ -32,5 +31,6 @@ router.get("/health", (_, res) => {
 */
 
 router.use("/auth", authRoutes);
+router.use("/ai", aiRoutes);
 
 export default router;

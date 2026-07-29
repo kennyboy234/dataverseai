@@ -1,3 +1,5 @@
+// src\app\marketing\login\page.tsx
+
 "use client";
 
 import { useState } from "react";
@@ -25,7 +27,7 @@ export default function LoginPage() {
       localStorage.setItem("accessToken", res.data.session.accessToken);
       localStorage.setItem("refreshToken", res.data.session.refreshToken);
 
-      router.push("/");
+      router.push("/dashboard");
     } catch (err: any) {
       setError(err.message || "Invalid email or password.");
     } finally {

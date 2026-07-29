@@ -1,3 +1,5 @@
+// src\app\marketing\signup\page.tsx
+
 "use client";
 
 import { useState } from "react";

@@ -17,4 +17,8 @@ export const ENDPOINTS = {
 
     CURRENT_USER: `${API_PREFIX}/auth/me`,
   },
+
+  AI: {
+    CHAT: `${API_PREFIX}/ai/chat`,
+  },
 } as const;
