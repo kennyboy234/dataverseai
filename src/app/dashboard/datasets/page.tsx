@@ -7,6 +7,7 @@ import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import UploadZone from "@/components/dashboard/UploadZone";
 import DataTable from "@/components/dashboard/DataTable";
 import SummaryStats from "@/components/dashboard/SummaryStats";
+import PivotTable from "@/components/dashboard/PivotTable";
 
 export default function DatasetsPage() {
   const [fileName, setFileName] = useState<string | null>(null);
@@ -25,7 +26,6 @@ export default function DatasetsPage() {
         const firstSheetName = workbook.SheetNames[0];
         const sheet = workbook.Sheets[firstSheetName];
 
-        // Get raw rows first (as arrays) so we can find the real header row
         const rawRows: any[][] = XLSX.utils.sheet_to_json(sheet, {
           header: 1,
           defval: "",
@@ -36,8 +36,6 @@ export default function DatasetsPage() {
           return;
         }
 
-        // Find the first row that looks like real column headers:
-        // a row with more than one non-empty cell
         let headerRowIndex = 0;
         for (let i = 0; i < rawRows.length; i++) {
           const nonEmptyCount = rawRows[i].filter(
@@ -118,6 +116,7 @@ export default function DatasetsPage() {
                 Upload a different file
               </button>
             </div>
+
             <DataTable columns={columns} rows={rows} />
 
             <div className="mt-6">
@@ -125,6 +124,13 @@ export default function DatasetsPage() {
                 Summary Statistics
               </h2>
               <SummaryStats columns={columns} rows={rows} />
+            </div>
+
+            <div className="mt-6">
+              <h2 className="text-lg font-semibold text-[#111827] dark:text-white mb-3">
+                Pivot Table
+              </h2>
+              <PivotTable columns={columns} rows={rows} />
             </div>
           </div>
         )}
