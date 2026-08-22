@@ -12,22 +12,43 @@ type ColumnStats = {
   unique?: number;
 };
 
+function isMissingValue(value: unknown): boolean {
+  if (value === null || value === undefined) return true;
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (trimmed === "") return true;
+    if (trimmed === "-") return true;
+    if (trimmed.toLowerCase() === "n/a") return true;
+  }
+  return false;
+}
+
+function parseNumericValue(value: unknown): number | null {
+  if (isMissingValue(value)) return null;
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? value : null;
+  }
+  const num = Number(String(value).trim());
+  return Number.isFinite(num) ? num : null;
+}
+
+function formatNumeric(value: number | undefined): string {
+  if (value === undefined) return "—";
+  return value.toFixed(2);
+}
+
 function computeStats(columns: string[], rows: Record<string, any>[]): ColumnStats[] {
   return columns.map((col) => {
     const values = rows.map((r) => r[col]);
-    const missing = values.filter(
-      (v) => v === "" || v === null || v === undefined
-    ).length;
-    const present = values.filter(
-      (v) => v !== "" && v !== null && v !== undefined
-    );
+    const missing = values.filter(isMissingValue).length;
+    const nonMissing = values.filter((v) => !isMissingValue(v));
 
-    const numericValues = present
-      .map((v) => Number(v))
-      .filter((v) => !isNaN(v));
+    const numericValues = nonMissing
+      .map(parseNumericValue)
+      .filter((v): v is number => v !== null);
 
     const isNumeric =
-      present.length > 0 && numericValues.length === present.length;
+      nonMissing.length > 0 && numericValues.length === nonMissing.length;
 
     if (isNumeric) {
       const count = numericValues.length;
@@ -49,12 +70,12 @@ function computeStats(columns: string[], rows: Record<string, any>[]): ColumnSta
       };
     }
 
-    const unique = new Set(present.map((v) => String(v))).size;
+    const unique = new Set(nonMissing.map((v) => String(v))).size;
 
     return {
       name: col,
       type: "text",
-      count: present.length,
+      count: nonMissing.length,
       missing,
       unique,
     };
@@ -124,16 +145,16 @@ export default function SummaryStats({
                   {s.missing}
                 </td>
                 <td className="px-4 py-2 text-gray-700 dark:text-gray-300">
-                  {s.type === "numeric" ? s.min?.toFixed(2) : "—"}
+                  {s.type === "numeric" ? formatNumeric(s.min) : "—"}
                 </td>
                 <td className="px-4 py-2 text-gray-700 dark:text-gray-300">
-                  {s.type === "numeric" ? s.max?.toFixed(2) : "—"}
+                  {s.type === "numeric" ? formatNumeric(s.max) : "—"}
                 </td>
                 <td className="px-4 py-2 text-gray-700 dark:text-gray-300">
-                  {s.type === "numeric" ? s.mean?.toFixed(2) : "—"}
+                  {s.type === "numeric" ? formatNumeric(s.mean) : "—"}
                 </td>
                 <td className="px-4 py-2 text-gray-700 dark:text-gray-300">
-                  {s.type === "numeric" ? s.stdDev?.toFixed(2) : "—"}
+                  {s.type === "numeric" ? formatNumeric(s.stdDev) : "—"}
                 </td>
                 <td className="px-4 py-2 text-gray-700 dark:text-gray-300">
                   {s.type === "text" ? s.unique : "—"}

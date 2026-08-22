@@ -10,40 +10,46 @@ export default function DataTable({
   const previewRows = rows.slice(0, 20);
 
   return (
-    <div className="overflow-x-auto border border-gray-200 dark:border-gray-800 rounded-xl">
-      <table className="min-w-full text-sm">
-        <thead className="bg-gray-50 dark:bg-gray-800">
-          <tr>
-            {columns.map((col) => (
-              <th
-                key={col}
-                className="text-left px-4 py-2 font-semibold text-[#111827] dark:text-white whitespace-nowrap"
-              >
-                {col}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {previewRows.map((row, i) => (
-            <tr
-              key={i}
-              className="border-t border-gray-100 dark:border-gray-800"
-            >
-              {columns.map((col) => (
-                <td
+    <div className="border border-gray-200 dark:border-gray-800 rounded-xl">
+      <div className="overflow-auto max-h-[500px]">
+        <table className="min-w-full text-sm border-collapse">
+          <thead className="sticky top-0 z-20 bg-gray-50 dark:bg-gray-800">
+            <tr>
+              {columns.map((col, colIndex) => (
+                <th
                   key={col}
-                  className="px-4 py-2 text-gray-700 dark:text-gray-300 whitespace-nowrap"
+                  className={`text-left px-4 py-2 font-semibold text-[#111827] dark:text-white whitespace-nowrap border border-gray-200 dark:border-gray-700 ${
+                    colIndex === 0 ? "sticky left-0 z-30 bg-gray-50 dark:bg-gray-800" : ""
+                  }`}
                 >
-                  {String(row[col] ?? "")}
-                </td>
+                  {col}
+                </th>
               ))}
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {previewRows.map((row, i) => (
+              <tr
+                key={i}
+                className={i % 2 === 0 ? "bg-white dark:bg-gray-900" : "bg-gray-50 dark:bg-gray-800/50"}
+              >
+                {columns.map((col, colIndex) => (
+                  <td
+                    key={col}
+                    className={`px-4 py-2 text-gray-700 dark:text-gray-300 whitespace-nowrap border border-gray-200 dark:border-gray-700 ${
+                      colIndex === 0 ? `sticky left-0 z-10 ${i % 2 === 0 ? "bg-white dark:bg-gray-900" : "bg-gray-50 dark:bg-gray-800/50"}` : ""
+                    }`}
+                  >
+                    {String(row[col] ?? "")}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
       {rows.length > 20 && (
-        <p className="text-xs text-gray-500 dark:text-gray-400 px-4 py-2">
+        <p className="text-xs text-gray-500 dark:text-gray-400 px-4 py-2 border-t border-gray-200 dark:border-gray-800">
           Showing first 20 of {rows.length} rows
         </p>
       )}
