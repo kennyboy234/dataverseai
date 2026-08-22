@@ -7,7 +7,7 @@ export default function DataTable({
   columns: string[];
   rows: Record<string, any>[];
 }) {
-  const previewRows = rows.slice(0, 20);
+  const previewRows = rows;
 
   return (
     <div className="border border-gray-200 dark:border-gray-800 rounded-xl">
@@ -48,11 +48,9 @@ export default function DataTable({
           </tbody>
         </table>
       </div>
-      {rows.length > 20 && (
-        <p className="text-xs text-gray-500 dark:text-gray-400 px-4 py-2 border-t border-gray-200 dark:border-gray-800">
-          Showing first 20 of {rows.length} rows
-        </p>
-      )}
+      <p className="text-xs text-gray-500 dark:text-gray-400 px-4 py-2 border-t border-gray-200 dark:border-gray-800">
+        {rows.length} rows total
+      </p>
     </div>
   );
 }
