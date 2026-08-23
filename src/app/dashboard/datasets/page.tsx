@@ -45,7 +45,22 @@ export default function DatasetsPage() {
         }
       }
 
-      const headerRow = rawRows[headerRowIndex].map((h) => String(h));
+      const rawHeaderRow = rawRows[headerRowIndex].map((h, i) => {
+        const label = String(h).trim();
+        return label === "" ? `Column ${i + 1}` : label;
+      });
+
+      // De-duplicate any repeated header names
+      const seen: Record<string, number> = {};
+      const headerRow = rawHeaderRow.map((col) => {
+        if (seen[col] === undefined) {
+          seen[col] = 0;
+          return col;
+        }
+        seen[col] += 1;
+        return `${col} (${seen[col]})`;
+      });
+
       const dataRows = rawRows.slice(headerRowIndex + 1);
 
       const json: Record<string, any>[] = dataRows
@@ -175,20 +190,20 @@ export default function DatasetsPage() {
               </div>
             )}
 
-            <DataTable columns={columns} rows={rows} />
+            <DataTable key={fileName + selectedSheet} columns={columns} rows={rows} />
 
             <div className="mt-6">
               <h2 className="text-lg font-semibold text-[#111827] dark:text-white mb-3">
                 Summary Statistics
               </h2>
-              <SummaryStats columns={columns} rows={rows} />
+              <SummaryStats key={fileName + selectedSheet} columns={columns} rows={rows} />
             </div>
 
             <div className="mt-6">
               <h2 className="text-lg font-semibold text-[#111827] dark:text-white mb-3">
                 Pivot Table
               </h2>
-              <PivotTable columns={columns} rows={rows} />
+              <PivotTable key={fileName + selectedSheet} columns={columns} rows={rows} />
             </div>
           </div>
         )}
