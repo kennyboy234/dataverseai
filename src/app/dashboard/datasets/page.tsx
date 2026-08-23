@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import * as XLSX from "xlsx";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
@@ -8,6 +8,9 @@ import UploadZone from "@/components/dashboard/UploadZone";
 import DataTable from "@/components/dashboard/DataTable";
 import SummaryStats from "@/components/dashboard/SummaryStats";
 import PivotTable from "@/components/dashboard/PivotTable";
+import CorrelationMatrix from "@/components/dashboard/CorrelationMatrix";
+import FilterBar, { FilterCondition } from "@/components/dashboard/FilterBar";
+import { applyFilters } from "@/lib/applyFilters";
 
 export default function DatasetsPage() {
   const [fileName, setFileName] = useState<string | null>(null);
@@ -16,7 +19,10 @@ export default function DatasetsPage() {
   const [selectedSheet, setSelectedSheet] = useState<string>("");
   const [columns, setColumns] = useState<string[]>([]);
   const [rows, setRows] = useState<Record<string, any>[]>([]);
+  const [filters, setFilters] = useState<FilterCondition[]>([]);
   const [error, setError] = useState("");
+
+  const filteredRows = useMemo(() => applyFilters(rows, filters), [rows, filters]);
 
   function parseSheet(wb: XLSX.WorkBook, sheetName: string) {
     try {
@@ -50,7 +56,6 @@ export default function DatasetsPage() {
         return label === "" ? `Column ${i + 1}` : label;
       });
 
-      // De-duplicate any repeated header names
       const seen: Record<string, number> = {};
       const headerRow = rawHeaderRow.map((col) => {
         if (seen[col] === undefined) {
@@ -80,7 +85,6 @@ export default function DatasetsPage() {
         return;
       }
 
-      // Drop columns where every row is blank/empty
       const nonEmptyColumns = headerRow.filter((col) =>
         json.some((row) => row[col] !== "" && row[col] !== null && row[col] !== undefined)
       );
@@ -88,6 +92,7 @@ export default function DatasetsPage() {
       setError("");
       setColumns(nonEmptyColumns);
       setRows(json);
+      setFilters([]);
     } catch (err) {
       setError("Couldn't read that sheet. Please check the format and try again.");
     }
@@ -154,7 +159,7 @@ export default function DatasetsPage() {
                   {fileName}
                 </p>
                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                  {rows.length} rows &middot; {columns.length} columns
+                  {filteredRows.length} of {rows.length} rows &middot; {columns.length} columns
                 </p>
               </div>
               <button
@@ -165,6 +170,7 @@ export default function DatasetsPage() {
                   setSelectedSheet("");
                   setColumns([]);
                   setRows([]);
+                  setFilters([]);
                 }}
                 className="text-sm text-[#2563EB] hover:underline"
               >
@@ -195,20 +201,29 @@ export default function DatasetsPage() {
               </div>
             )}
 
-            <DataTable key={fileName + selectedSheet} columns={columns} rows={rows} />
+            <FilterBar key={fileName + selectedSheet} columns={columns} onFilterChange={setFilters} />
+
+            <DataTable key={fileName + selectedSheet + filteredRows.length} columns={columns} rows={filteredRows} />
 
             <div className="mt-6">
               <h2 className="text-lg font-semibold text-[#111827] dark:text-white mb-3">
                 Summary Statistics
               </h2>
-              <SummaryStats key={fileName + selectedSheet} columns={columns} rows={rows} />
+              <SummaryStats key={fileName + selectedSheet + filteredRows.length} columns={columns} rows={filteredRows} />
+            </div>
+
+            <div className="mt-6">
+              <h2 className="text-lg font-semibold text-[#111827] dark:text-white mb-3">
+                Correlation Matrix
+              </h2>
+              <CorrelationMatrix key={fileName + selectedSheet + filteredRows.length} columns={columns} rows={filteredRows} />
             </div>
 
             <div className="mt-6">
               <h2 className="text-lg font-semibold text-[#111827] dark:text-white mb-3">
                 Pivot Table
               </h2>
-              <PivotTable key={fileName + selectedSheet} columns={columns} rows={rows} />
+              <PivotTable key={fileName + selectedSheet + filteredRows.length} columns={columns} rows={filteredRows} />
             </div>
           </div>
         )}
