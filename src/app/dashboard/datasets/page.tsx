@@ -10,7 +10,9 @@ import SummaryStats from "@/components/dashboard/SummaryStats";
 import PivotTable from "@/components/dashboard/PivotTable";
 import CorrelationMatrix from "@/components/dashboard/CorrelationMatrix";
 import FilterBar, { FilterCondition } from "@/components/dashboard/FilterBar";
+import CalculatedColumns from "@/components/dashboard/CalculatedColumns";
 import { applyFilters } from "@/lib/applyFilters";
+import { CalculatedColumn, applyCalculatedColumns } from "@/lib/evaluateFormula";
 
 export default function DatasetsPage() {
   const [fileName, setFileName] = useState<string | null>(null);
@@ -20,9 +22,32 @@ export default function DatasetsPage() {
   const [columns, setColumns] = useState<string[]>([]);
   const [rows, setRows] = useState<Record<string, any>[]>([]);
   const [filters, setFilters] = useState<FilterCondition[]>([]);
+  const [calculatedColumns, setCalculatedColumns] = useState<CalculatedColumn[]>([]);
   const [error, setError] = useState("");
 
   const filteredRows = useMemo(() => applyFilters(rows, filters), [rows, filters]);
+
+  // Apply calculated columns AFTER filtering, so formulas run on the
+  // currently-filtered data and stay consistent with what's on screen.
+  const calculatedRows = useMemo(
+    () => applyCalculatedColumns(filteredRows, calculatedColumns),
+    [filteredRows, calculatedColumns]
+  );
+
+  // All downstream components (table, stats, correlation, pivot) need to
+  // know about calculated columns too, not just the original file columns.
+  const allColumns = useMemo(
+    () => [...columns, ...calculatedColumns.map((cc) => cc.name)],
+    [columns, calculatedColumns]
+  );
+
+  function handleAddCalculatedColumn(cc: CalculatedColumn) {
+    setCalculatedColumns((prev) => [...prev, cc]);
+  }
+
+  function handleRemoveCalculatedColumn(id: string) {
+    setCalculatedColumns((prev) => prev.filter((cc) => cc.id !== id));
+  }
 
   function parseSheet(wb: XLSX.WorkBook, sheetName: string) {
     try {
@@ -93,6 +118,7 @@ export default function DatasetsPage() {
       setColumns(nonEmptyColumns);
       setRows(json);
       setFilters([]);
+      setCalculatedColumns([]); // reset calculated columns on new sheet/file
     } catch (err) {
       setError("Couldn't read that sheet. Please check the format and try again.");
     }
@@ -159,7 +185,7 @@ export default function DatasetsPage() {
                   {fileName}
                 </p>
                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                  {filteredRows.length} of {rows.length} rows &middot; {columns.length} columns
+                  {filteredRows.length} of {rows.length} rows &middot; {allColumns.length} columns
                 </p>
               </div>
               <button
@@ -171,6 +197,7 @@ export default function DatasetsPage() {
                   setColumns([]);
                   setRows([]);
                   setFilters([]);
+                  setCalculatedColumns([]);
                 }}
                 className="text-sm text-[#2563EB] hover:underline"
               >
@@ -203,27 +230,51 @@ export default function DatasetsPage() {
 
             <FilterBar key={fileName + selectedSheet} columns={columns} onFilterChange={setFilters} />
 
-            <DataTable key={fileName + selectedSheet + filteredRows.length} columns={columns} rows={filteredRows} />
+            <CalculatedColumns
+              key={"calc-" + fileName + selectedSheet}
+              columns={columns}
+              calculatedColumns={calculatedColumns}
+              onAdd={handleAddCalculatedColumn}
+              onRemove={handleRemoveCalculatedColumn}
+            />
+
+            <DataTable
+              key={fileName + selectedSheet + calculatedRows.length + calculatedColumns.length}
+              columns={allColumns}
+              rows={calculatedRows}
+            />
 
             <div className="mt-6">
               <h2 className="text-lg font-semibold text-[#111827] dark:text-white mb-3">
                 Summary Statistics
               </h2>
-              <SummaryStats key={fileName + selectedSheet + filteredRows.length} columns={columns} rows={filteredRows} />
+              <SummaryStats
+                key={fileName + selectedSheet + calculatedRows.length + calculatedColumns.length}
+                columns={allColumns}
+                rows={calculatedRows}
+              />
             </div>
 
             <div className="mt-6">
               <h2 className="text-lg font-semibold text-[#111827] dark:text-white mb-3">
                 Correlation Matrix
               </h2>
-              <CorrelationMatrix key={fileName + selectedSheet + filteredRows.length} columns={columns} rows={filteredRows} />
+              <CorrelationMatrix
+                key={fileName + selectedSheet + calculatedRows.length + calculatedColumns.length}
+                columns={allColumns}
+                rows={calculatedRows}
+              />
             </div>
 
             <div className="mt-6">
               <h2 className="text-lg font-semibold text-[#111827] dark:text-white mb-3">
                 Pivot Table
               </h2>
-              <PivotTable key={fileName + selectedSheet + filteredRows.length} columns={columns} rows={filteredRows} />
+              <PivotTable
+                key={fileName + selectedSheet + calculatedRows.length + calculatedColumns.length}
+                columns={allColumns}
+                rows={calculatedRows}
+              />
             </div>
           </div>
         )}
