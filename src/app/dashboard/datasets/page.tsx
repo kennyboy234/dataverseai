@@ -11,9 +11,67 @@ import PivotTable from "@/components/dashboard/PivotTable";
 
 export default function DatasetsPage() {
   const [fileName, setFileName] = useState<string | null>(null);
+  const [workbook, setWorkbook] = useState<XLSX.WorkBook | null>(null);
+  const [sheetNames, setSheetNames] = useState<string[]>([]);
+  const [selectedSheet, setSelectedSheet] = useState<string>("");
   const [columns, setColumns] = useState<string[]>([]);
   const [rows, setRows] = useState<Record<string, any>[]>([]);
   const [error, setError] = useState("");
+
+  function parseSheet(wb: XLSX.WorkBook, sheetName: string) {
+    try {
+      const sheet = wb.Sheets[sheetName];
+
+      const rawRows: any[][] = XLSX.utils.sheet_to_json(sheet, {
+        header: 1,
+        defval: "",
+      });
+
+      if (rawRows.length === 0) {
+        setError("This sheet appears to be empty.");
+        setColumns([]);
+        setRows([]);
+        return;
+      }
+
+      let headerRowIndex = 0;
+      for (let i = 0; i < rawRows.length; i++) {
+        const nonEmptyCount = rawRows[i].filter(
+          (cell) => cell !== "" && cell !== undefined && cell !== null
+        ).length;
+        if (nonEmptyCount > 1) {
+          headerRowIndex = i;
+          break;
+        }
+      }
+
+      const headerRow = rawRows[headerRowIndex].map((h) => String(h));
+      const dataRows = rawRows.slice(headerRowIndex + 1);
+
+      const json: Record<string, any>[] = dataRows
+        .filter((row) => row.some((cell) => cell !== "" && cell !== undefined))
+        .map((row) => {
+          const obj: Record<string, any> = {};
+          headerRow.forEach((col, i) => {
+            obj[col] = row[i] ?? "";
+          });
+          return obj;
+        });
+
+      if (json.length === 0) {
+        setError("Couldn't find any data rows in this sheet.");
+        setColumns([]);
+        setRows([]);
+        return;
+      }
+
+      setError("");
+      setColumns(headerRow);
+      setRows(json);
+    } catch (err) {
+      setError("Couldn't read that sheet. Please check the format and try again.");
+    }
+  }
 
   function handleFile(file: File) {
     setError("");
@@ -22,58 +80,32 @@ export default function DatasetsPage() {
     reader.onload = (e) => {
       try {
         const data = e.target?.result;
-        const workbook = XLSX.read(data, { type: "binary" });
-        const firstSheetName = workbook.SheetNames[0];
-        const sheet = workbook.Sheets[firstSheetName];
+        const wb = XLSX.read(data, { type: "binary" });
 
-        const rawRows: any[][] = XLSX.utils.sheet_to_json(sheet, {
-          header: 1,
-          defval: "",
-        });
-
-        if (rawRows.length === 0) {
-          setError("This file appears to be empty.");
+        if (wb.SheetNames.length === 0) {
+          setError("This file has no sheets.");
           return;
         }
 
-        let headerRowIndex = 0;
-        for (let i = 0; i < rawRows.length; i++) {
-          const nonEmptyCount = rawRows[i].filter(
-            (cell) => cell !== "" && cell !== undefined && cell !== null
-          ).length;
-          if (nonEmptyCount > 1) {
-            headerRowIndex = i;
-            break;
-          }
-        }
-
-        const headerRow = rawRows[headerRowIndex].map((h) => String(h));
-        const dataRows = rawRows.slice(headerRowIndex + 1);
-
-        const json: Record<string, any>[] = dataRows
-          .filter((row) => row.some((cell) => cell !== "" && cell !== undefined))
-          .map((row) => {
-            const obj: Record<string, any> = {};
-            headerRow.forEach((col, i) => {
-              obj[col] = row[i] ?? "";
-            });
-            return obj;
-          });
-
-        if (json.length === 0) {
-          setError("Couldn't find any data rows in this file.");
-          return;
-        }
-
-        setColumns(headerRow);
-        setRows(json);
+        setWorkbook(wb);
+        setSheetNames(wb.SheetNames);
         setFileName(file.name);
+
+        const firstSheet = wb.SheetNames[0];
+        setSelectedSheet(firstSheet);
+        parseSheet(wb, firstSheet);
       } catch (err) {
         setError("Couldn't read that file. Please check the format and try again.");
       }
     };
 
     reader.readAsBinaryString(file);
+  }
+
+  function handleSheetChange(sheetName: string) {
+    if (!workbook) return;
+    setSelectedSheet(sheetName);
+    parseSheet(workbook, sheetName);
   }
 
   return (
@@ -108,6 +140,9 @@ export default function DatasetsPage() {
               <button
                 onClick={() => {
                   setFileName(null);
+                  setWorkbook(null);
+                  setSheetNames([]);
+                  setSelectedSheet("");
                   setColumns([]);
                   setRows([]);
                 }}
@@ -116,6 +151,29 @@ export default function DatasetsPage() {
                 Upload a different file
               </button>
             </div>
+
+            {sheetNames.length > 1 && (
+              <div className="mb-4">
+                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                  Sheet
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {sheetNames.map((name) => (
+                    <button
+                      key={name}
+                      onClick={() => handleSheetChange(name)}
+                      className={`text-xs px-3 py-1.5 rounded-full border transition ${
+                        selectedSheet === name
+                          ? "bg-[#2563EB] text-white border-[#2563EB]"
+                          : "bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-700"
+                      }`}
+                    >
+                      {name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <DataTable columns={columns} rows={rows} />
 
