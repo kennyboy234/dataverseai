@@ -80,8 +80,13 @@ export default function DatasetsPage() {
         return;
       }
 
+      // Drop columns where every row is blank/empty
+      const nonEmptyColumns = headerRow.filter((col) =>
+        json.some((row) => row[col] !== "" && row[col] !== null && row[col] !== undefined)
+      );
+
       setError("");
-      setColumns(headerRow);
+      setColumns(nonEmptyColumns);
       setRows(json);
     } catch (err) {
       setError("Couldn't read that sheet. Please check the format and try again.");
