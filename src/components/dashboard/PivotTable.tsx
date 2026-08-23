@@ -3,6 +3,16 @@
 import { useState, useMemo } from "react";
 
 type Aggregation = "sum" | "average" | "count" | "min" | "max";
+type DropZone = "rows" | "columns" | "values";
+
+function aggregate(values: number[], aggregation: Aggregation): number {
+  if (values.length === 0) return 0;
+  if (aggregation === "sum") return values.reduce((a, b) => a + b, 0);
+  if (aggregation === "average") return values.reduce((a, b) => a + b, 0) / values.length;
+  if (aggregation === "count") return values.length;
+  if (aggregation === "min") return Math.min(...values);
+  return Math.max(...values);
+}
 
 export default function PivotTable({
   columns,
@@ -21,180 +31,250 @@ export default function PivotTable({
     );
   }, [columns, rows]);
 
-  const [groupByColumns, setGroupByColumns] = useState<string[]>(
-    columns[0] ? [columns[0]] : []
-  );
-  const [valueColumn, setValueColumn] = useState<string>(numericColumns[0] ?? "");
+  const [rowFields, setRowFields] = useState<string[]>([]);
+  const [columnField, setColumnField] = useState<string | null>(null);
+  const [valueField, setValueField] = useState<string | null>(null);
   const [aggregation, setAggregation] = useState<Aggregation>("sum");
+  const [draggedField, setDraggedField] = useState<string | null>(null);
 
-  function toggleGroupByColumn(col: string) {
-    setGroupByColumns((prev) =>
-      prev.includes(col) ? prev.filter((c) => c !== col) : [...prev, col]
-    );
+  const availableFields = columns.filter(
+    (col) => !rowFields.includes(col) && col !== columnField && col !== valueField
+  );
+
+  function removeFromZone(field: string) {
+    setRowFields((prev) => prev.filter((f) => f !== field));
+    if (columnField === field) setColumnField(null);
+    if (valueField === field) setValueField(null);
   }
 
-  const pivotResult = useMemo(() => {
-    if (groupByColumns.length === 0 || !valueColumn) return [];
+  function handleDrop(zone: DropZone) {
+    if (!draggedField) return;
 
-    const groups: Record<string, { parts: string[]; values: number[] }> = {};
+    removeFromZone(draggedField);
 
-    rows.forEach((row) => {
-      const parts = groupByColumns.map((col) => String(row[col] ?? "(blank)"));
-      const key = parts.join(" ||| ");
-      const rawVal = row[valueColumn];
-      const numVal = Number(rawVal);
-
-      if (rawVal === "" || rawVal === null || rawVal === undefined || isNaN(numVal)) {
+    if (zone === "rows") {
+      setRowFields((prev) => [...prev, draggedField]);
+    } else if (zone === "columns") {
+      setColumnField(draggedField);
+    } else if (zone === "values") {
+      if (!numericColumns.includes(draggedField)) {
+        setDraggedField(null);
         return;
       }
+      setValueField(draggedField);
+    }
+    setDraggedField(null);
+  }
 
-      if (!groups[key]) groups[key] = { parts, values: [] };
-      groups[key].values.push(numVal);
+  const pivotData = useMemo(() => {
+    if (rowFields.length === 0 || !valueField) return null;
+
+    type Group = { parts: string[]; cols: Record<string, number[]> };
+    const groups: Record<string, Group> = {};
+    const colKeysSet = new Set<string>();
+
+    rows.forEach((row) => {
+      const rawVal = row[valueField];
+      const numVal = Number(rawVal);
+      if (rawVal === "" || rawVal === null || rawVal === undefined || isNaN(numVal)) return;
+
+      const parts = rowFields.map((f) => String(row[f] ?? "(blank)"));
+      const rowKey = parts.join(" ||| ");
+      const colKey = columnField ? String(row[columnField] ?? "(blank)") : "Value";
+      colKeysSet.add(colKey);
+
+      if (!groups[rowKey]) groups[rowKey] = { parts, cols: {} };
+      if (!groups[rowKey].cols[colKey]) groups[rowKey].cols[colKey] = [];
+      groups[rowKey].cols[colKey].push(numVal);
     });
 
-    return Object.values(groups)
-      .map(({ parts, values }) => {
-        let result = 0;
-        if (aggregation === "sum") {
-          result = values.reduce((a, b) => a + b, 0);
-        } else if (aggregation === "average") {
-          result = values.reduce((a, b) => a + b, 0) / values.length;
-        } else if (aggregation === "count") {
-          result = values.length;
-        } else if (aggregation === "min") {
-          result = Math.min(...values);
-        } else if (aggregation === "max") {
-          result = Math.max(...values);
-        }
-        return { parts, value: result, count: values.length };
-      })
-      .sort((a, b) => b.value - a.value);
-  }, [rows, groupByColumns, valueColumn, aggregation]);
+    const colKeys = Array.from(colKeysSet).sort();
 
-  if (numericColumns.length === 0) {
-    return (
-      <div className="border border-gray-200 dark:border-gray-800 rounded-xl p-4 text-sm text-gray-500 dark:text-gray-400">
-        No numeric columns available to summarize.
-      </div>
-    );
-  }
+    const tableRows = Object.values(groups)
+      .map((group) => {
+        const cellValues: Record<string, number> = {};
+        let allValues: number[] = [];
+        colKeys.forEach((ck) => {
+          const vals = group.cols[ck] ?? [];
+          cellValues[ck] = aggregate(vals, aggregation);
+          allValues = allValues.concat(vals);
+        });
+        const total = aggregate(allValues, aggregation);
+        return { parts: group.parts, cellValues, total };
+      })
+      .sort((a, b) => b.total - a.total);
+
+    return { colKeys, tableRows };
+  }, [rows, rowFields, columnField, valueField, aggregation]);
 
   return (
     <div className="border border-gray-200 dark:border-gray-800 rounded-xl p-4">
-      <div className="flex flex-wrap gap-6 mb-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        {/* Available fields pool */}
         <div>
-          <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
-            Group by (select one or more)
-          </label>
-          <div className="flex flex-wrap gap-2 max-w-md">
-            {columns.map((col) => (
-              <button
-                key={col}
-                type="button"
-                onClick={() => toggleGroupByColumn(col)}
-                className={`text-xs px-3 py-1.5 rounded-full border transition ${
-                  groupByColumns.includes(col)
-                    ? "bg-[#2563EB] text-white border-[#2563EB]"
-                    : "bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-700"
-                }`}
+          <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wide">
+            Fields
+          </p>
+          <div
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={() => draggedField && removeFromZone(draggedField)}
+            className="min-h-[140px] border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg p-2 flex flex-col gap-1.5"
+          >
+            {availableFields.map((field) => (
+              <div
+                key={field}
+                draggable
+                onDragStart={() => setDraggedField(field)}
+                className="text-xs px-2 py-1.5 rounded-md bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 cursor-grab active:cursor-grabbing"
               >
-                {col}
-              </button>
+                {field}
+                {numericColumns.includes(field) && (
+                  <span className="ml-1 text-[10px] text-[#2563EB]">#</span>
+                )}
+              </div>
             ))}
+            {availableFields.length === 0 && (
+              <p className="text-xs text-gray-400 italic">All fields assigned</p>
+            )}
           </div>
         </div>
 
+        {/* Rows drop zone */}
         <div>
-          <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
-            Summarize
-          </label>
-          <select
-            value={valueColumn}
-            onChange={(e) => setValueColumn(e.target.value)}
-            className="border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-1.5 text-sm bg-white dark:bg-gray-900 text-[#111827] dark:text-white"
+          <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wide">
+            Rows
+          </p>
+          <div
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={() => handleDrop("rows")}
+            className="min-h-[140px] border-2 border-dashed border-[#2563EB]/40 rounded-lg p-2 flex flex-col gap-1.5 bg-blue-50/30 dark:bg-blue-900/10"
           >
-            {numericColumns.map((col) => (
-              <option key={col} value={col}>
-                {col}
-              </option>
+            {rowFields.map((field) => (
+              <div
+                key={field}
+                className="flex items-center justify-between text-xs px-2 py-1.5 rounded-md bg-[#2563EB] text-white"
+              >
+                {field}
+                <button onClick={() => removeFromZone(field)} className="ml-2 hover:opacity-70">
+                  ×
+                </button>
+              </div>
             ))}
-          </select>
+            {rowFields.length === 0 && (
+              <p className="text-xs text-gray-400 italic">Drag fields here</p>
+            )}
+          </div>
         </div>
 
+        {/* Columns drop zone */}
         <div>
-          <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
-            Using
-          </label>
-          <select
-            value={aggregation}
-            onChange={(e) => setAggregation(e.target.value as Aggregation)}
-            className="border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-1.5 text-sm bg-white dark:bg-gray-900 text-[#111827] dark:text-white"
+          <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wide">
+            Columns
+          </p>
+          <div
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={() => handleDrop("columns")}
+            className="min-h-[140px] border-2 border-dashed border-purple-400/40 rounded-lg p-2 flex flex-col gap-1.5 bg-purple-50/30 dark:bg-purple-900/10"
           >
-            <option value="sum">Sum</option>
-            <option value="average">Average</option>
-            <option value="count">Count</option>
-            <option value="min">Min</option>
-            <option value="max">Max</option>
-          </select>
+            {columnField && (
+              <div className="flex items-center justify-between text-xs px-2 py-1.5 rounded-md bg-purple-600 text-white">
+                {columnField}
+                <button onClick={() => removeFromZone(columnField)} className="ml-2 hover:opacity-70">
+                  ×
+                </button>
+              </div>
+            )}
+            {!columnField && <p className="text-xs text-gray-400 italic">Drag one field here (optional)</p>}
+          </div>
+        </div>
+
+        {/* Values drop zone */}
+        <div>
+          <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wide">
+            Values
+          </p>
+          <div
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={() => handleDrop("values")}
+            className="min-h-[140px] border-2 border-dashed border-orange-400/40 rounded-lg p-2 flex flex-col gap-1.5 bg-orange-50/30 dark:bg-orange-900/10"
+          >
+            {valueField && (
+              <div className="flex items-center justify-between text-xs px-2 py-1.5 rounded-md bg-orange-500 text-white">
+                {valueField}
+                <button onClick={() => removeFromZone(valueField)} className="ml-2 hover:opacity-70">
+                  ×
+                </button>
+              </div>
+            )}
+            {!valueField && <p className="text-xs text-gray-400 italic">Drag a numeric (#) field here</p>}
+            {valueField && (
+              <select
+                value={aggregation}
+                onChange={(e) => setAggregation(e.target.value as Aggregation)}
+                className="mt-1 text-xs border border-gray-300 dark:border-gray-700 rounded px-2 py-1 bg-white dark:bg-gray-900 text-[#111827] dark:text-white"
+              >
+                <option value="sum">Sum</option>
+                <option value="average">Average</option>
+                <option value="count">Count</option>
+                <option value="min">Min</option>
+                <option value="max">Max</option>
+              </select>
+            )}
+          </div>
         </div>
       </div>
 
-      {groupByColumns.length === 0 ? (
+      {!pivotData && (
         <p className="text-sm text-gray-500 dark:text-gray-400">
-          Select at least one column to group by.
+          Drag at least one field into <strong>Rows</strong> and one numeric field into <strong>Values</strong> to build your pivot.
         </p>
-      ) : (
-        <div className="overflow-auto max-h-[400px] border border-gray-200 dark:border-gray-800 rounded-lg">
+      )}
+
+      {pivotData && (
+        <div className="overflow-auto max-h-[450px] border border-gray-200 dark:border-gray-800 rounded-lg">
           <table className="min-w-full text-sm border-collapse">
             <thead className="sticky top-0 bg-gray-50 dark:bg-gray-800">
               <tr>
-                {groupByColumns.map((col) => (
-                  <th
-                    key={col}
-                    className="text-left px-4 py-2 font-semibold text-[#111827] dark:text-white border border-gray-200 dark:border-gray-700"
-                  >
-                    {col}
+                {rowFields.map((f) => (
+                  <th key={f} className="text-left px-4 py-2 font-semibold text-[#111827] dark:text-white border border-gray-200 dark:border-gray-700">
+                    {f}
                   </th>
                 ))}
-                <th className="text-left px-4 py-2 font-semibold text-[#111827] dark:text-white border border-gray-200 dark:border-gray-700">
-                  {aggregation.charAt(0).toUpperCase() + aggregation.slice(1)} of {valueColumn}
-                </th>
-                <th className="text-left px-4 py-2 font-semibold text-[#111827] dark:text-white border border-gray-200 dark:border-gray-700">
-                  Rows
-                </th>
+                {pivotData.colKeys.map((ck) => (
+                  <th key={ck} className="text-left px-4 py-2 font-semibold text-[#111827] dark:text-white border border-gray-200 dark:border-gray-700">
+                    {ck}
+                  </th>
+                ))}
+                {pivotData.colKeys.length > 1 && (
+                  <th className="text-left px-4 py-2 font-semibold text-[#111827] dark:text-white border border-gray-200 dark:border-gray-700">
+                    Total
+                  </th>
+                )}
               </tr>
             </thead>
             <tbody>
-              {pivotResult.map((r, i) => (
-                <tr
-                  key={r.parts.join("|")}
-                  className={i % 2 === 0 ? "bg-white dark:bg-gray-900" : "bg-gray-50 dark:bg-gray-800/50"}
-                >
+              {pivotData.tableRows.map((r, i) => (
+                <tr key={r.parts.join("|")} className={i % 2 === 0 ? "bg-white dark:bg-gray-900" : "bg-gray-50 dark:bg-gray-800/50"}>
                   {r.parts.map((part, j) => (
-                    <td
-                      key={j}
-                      className="px-4 py-2 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700"
-                    >
+                    <td key={j} className="px-4 py-2 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700">
                       {part}
                     </td>
                   ))}
-                  <td className="px-4 py-2 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700">
-                    {r.value.toFixed(2)}
-                  </td>
-                  <td className="px-4 py-2 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700">
-                    {r.count}
-                  </td>
+                  {pivotData.colKeys.map((ck) => (
+                    <td key={ck} className="px-4 py-2 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700">
+                      {(r.cellValues[ck] ?? 0).toFixed(2)}
+                    </td>
+                  ))}
+                  {pivotData.colKeys.length > 1 && (
+                    <td className="px-4 py-2 font-medium text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-gray-700">
+                      {r.total.toFixed(2)}
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-      )}
-
-      {groupByColumns.length > 0 && pivotResult.length === 0 && (
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
-          No data to summarize for this combination.
-        </p>
       )}
     </div>
   );
