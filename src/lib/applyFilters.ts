@@ -4,10 +4,13 @@ export function applyFilters(
   rows: Record<string, any>[],
   conditions: FilterCondition[]
 ): Record<string, any>[] {
-  if (conditions.length === 0) return rows;
+  // Ignore conditions where no value has been typed yet
+  const activeConditions = conditions.filter((c) => c.value.trim() !== "");
+
+  if (activeConditions.length === 0) return rows;
 
   return rows.filter((row) =>
-    conditions.every((cond) => {
+    activeConditions.every((cond) => {
       const cellValue = row[cond.column];
       if (cellValue === undefined || cellValue === null) return false;
 
