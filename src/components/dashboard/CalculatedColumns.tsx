@@ -23,6 +23,13 @@ export default function CalculatedColumns({
   const [formula, setFormula] = useState("");
   const [error, setError] = useState("");
 
+  const insertColumnToken = (col: string) => {
+    setFormula((prev) => {
+      const needsSpace = prev.length > 0 && !prev.endsWith(" ");
+      return `${prev}${needsSpace ? " " : ""}{${col}}`;
+    });
+  };
+
   const handleAdd = () => {
     const trimmedName = name.trim();
 
@@ -63,8 +70,8 @@ export default function CalculatedColumns({
       </h3>
 
       <p className="text-xs text-gray-500 mb-3">
-        Create a new column from a formula. Reference existing columns by
-        wrapping their name in curly braces, e.g. {"{Revenue} - {Cost}"}.
+        Create a new column from a formula. Click a column below to insert it,
+        or type your own using curly braces, e.g. {"{Revenue} - {Cost}"}.
       </p>
 
       <div className="flex flex-col sm:flex-row gap-2 mb-2">
@@ -92,8 +99,22 @@ export default function CalculatedColumns({
 
       {error && <p className="text-xs text-red-600 mb-2">{error}</p>}
 
-      <div className="text-xs text-gray-500 mb-2">
-        Available columns: {columns.map((c) => `{${c}}`).join(", ")}
+      <div className="mb-2">
+        <p className="text-xs text-gray-500 mb-1">
+          Click to insert a column into your formula:
+        </p>
+        <div className="flex flex-wrap gap-1.5">
+          {columns.map((col) => (
+            <button
+              key={col}
+              type="button"
+              onClick={() => insertColumnToken(col)}
+              className="text-xs bg-gray-100 hover:bg-blue-100 hover:text-blue-700 text-gray-600 px-2 py-1 rounded border border-gray-200 transition"
+            >
+              {col}
+            </button>
+          ))}
+        </div>
       </div>
 
       {calculatedColumns.length > 0 && (
