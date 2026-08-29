@@ -7,7 +7,7 @@ import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import UploadZone from "@/components/dashboard/UploadZone";
 import DataTable from "@/components/dashboard/DataTable";
 import SummaryStats from "@/components/dashboard/SummaryStats";
-import PivotTable from "@/components/dashboard/PivotTable";
+import PivotTable from "@/components/dashboard/pivot/PivotTable";
 import CorrelationMatrix from "@/components/dashboard/CorrelationMatrix";
 import FilterBar, { FilterCondition } from "@/components/dashboard/FilterBar";
 import CalculatedColumns from "@/components/dashboard/CalculatedColumns";
@@ -27,15 +27,11 @@ export default function DatasetsPage() {
 
   const filteredRows = useMemo(() => applyFilters(rows, filters), [rows, filters]);
 
-  // Apply calculated columns AFTER filtering, so formulas run on the
-  // currently-filtered data and stay consistent with what's on screen.
   const calculatedRows = useMemo(
     () => applyCalculatedColumns(filteredRows, calculatedColumns),
     [filteredRows, calculatedColumns]
   );
 
-  // All downstream components (table, stats, correlation, pivot) need to
-  // know about calculated columns too, not just the original file columns.
   const allColumns = useMemo(
     () => [...columns, ...calculatedColumns.map((cc) => cc.name)],
     [columns, calculatedColumns]
@@ -118,7 +114,7 @@ export default function DatasetsPage() {
       setColumns(nonEmptyColumns);
       setRows(json);
       setFilters([]);
-      setCalculatedColumns([]); // reset calculated columns on new sheet/file
+      setCalculatedColumns([]);
     } catch (err) {
       setError("Couldn't read that sheet. Please check the format and try again.");
     }

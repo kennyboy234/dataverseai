@@ -14,7 +14,7 @@ function aggregate(values: number[], aggregation: Aggregation): number {
   return Math.max(...values);
 }
 
-export default function PivotTable({
+export default function AdvancedPivot({
   columns,
   rows,
 }: {
@@ -108,7 +108,7 @@ export default function PivotTable({
   }, [rows, rowFields, columnField, valueField, aggregation]);
 
   return (
-    <div className="border border-gray-200 dark:border-gray-800 rounded-xl p-4">
+    <div>
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         {/* Available fields pool */}
         <div>
