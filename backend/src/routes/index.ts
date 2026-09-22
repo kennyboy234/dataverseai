@@ -1,0 +1,40 @@
+import { Router } from "express";
+
+import authRoutes from "../modules/auth/auth.routes.js";
+import aiRoutes from "../modules/ai/ai.routes.js";
+import auditRoutes from "../modules/audit/audit.routes.js";
+import datasetsRoutes from "../modules/datasets/datasets.routes.js";
+
+import { API_VERSION } from "../utils/constants.js";
+
+const router = Router();
+
+router.get("/", (_, res) => {
+  res.status(200).json({
+    success: true,
+    message: "Welcome to DataVerse AI API",
+    version: API_VERSION,
+  });
+});
+
+router.get("/health", (_, res) => {
+  res.status(200).json({
+    success: true,
+    status: "healthy",
+    uptime: process.uptime(),
+    timestamp: new Date().toISOString(),
+  });
+});
+
+/*
+|--------------------------------------------------------------------------
+| Module Routes
+|--------------------------------------------------------------------------
+*/
+
+router.use("/auth", authRoutes);
+router.use("/ai", aiRoutes);
+router.use("/audit", auditRoutes);
+router.use("/datasets", datasetsRoutes);
+
+export default router;
