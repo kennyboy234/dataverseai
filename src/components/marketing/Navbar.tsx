@@ -6,9 +6,9 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Moon, Sun, Menu, X } from "lucide-react";
+import { Menu, Moon, Sun, X } from "lucide-react";
+import { useEffect, useState } from "react";
 
 const navLinks = [
   { label: "Home", href: "/" },
@@ -24,10 +24,8 @@ export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(() => {
-    setIsLoggedIn(!!localStorage.getItem("accessToken"));
-
-    const prefersDark = document.documentElement.classList.contains("dark");
-    setIsDark(prefersDark);
+    setIsLoggedIn(Boolean(localStorage.getItem("accessToken")));
+    setIsDark(document.documentElement.classList.contains("dark"));
   }, []);
 
   function toggleDarkMode() {
@@ -43,18 +41,19 @@ export default function Navbar() {
   }
 
   return (
-    <header className="sticky top-0 z-50 bg-white/80 dark:bg-[#0B1120]/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-800">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-        <Link href="/" className="text-lg font-bold text-[#111827] dark:text-white">
-          DataVerse <span className="text-[#2563EB]">AI</span>
+    <header className="sticky top-0 z-50 border-b border-slate-200/80 bg-white/70 backdrop-blur-xl">
+      <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+        <Link href="/" className="inline-flex items-center gap-2 text-lg font-semibold tracking-[-0.05em] text-slate-950">
+          <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-slate-950 text-xs font-bold text-white">D</span>
+          DataVerse <span className="text-sky-700">AI</span>
         </Link>
 
-        <nav className="hidden md:flex items-center gap-8">
+        <nav className="hidden items-center gap-8 md:flex">
           {navLinks.map((link) => (
             <Link
               key={link.href}
               href={link.href}
-              className="text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-[#2563EB] transition"
+              className="text-[13px] font-medium tracking-[0.14em] text-slate-600 uppercase transition hover:text-slate-950"
             >
               {link.label}
             </Link>
@@ -65,7 +64,7 @@ export default function Navbar() {
           <button
             onClick={toggleDarkMode}
             aria-label="Toggle dark mode"
-            className="p-2 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 transition hover:border-slate-300 hover:text-slate-950"
           >
             {isDark ? <Sun size={18} /> : <Moon size={18} />}
           </button>
@@ -74,13 +73,13 @@ export default function Navbar() {
             <>
               <Link
                 href="/dashboard"
-                className="hidden sm:inline-block px-4 py-2 rounded-lg bg-[#2563EB] text-white text-sm font-medium hover:bg-[#2563EB]/90 transition"
+                className="hidden rounded-full bg-slate-950 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-white transition hover:bg-slate-800 sm:inline-flex"
               >
                 Go to Dashboard
               </Link>
               <button
                 onClick={handleLogout}
-                className="hidden sm:inline-block text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-[#2563EB] transition"
+                className="hidden text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-600 transition hover:text-slate-950 sm:inline-flex"
               >
                 Log out
               </button>
@@ -88,7 +87,7 @@ export default function Navbar() {
           ) : (
             <Link
               href="/signup"
-              className="hidden sm:inline-block px-4 py-2 rounded-lg bg-[#2563EB] text-white text-sm font-medium hover:bg-[#2563EB]/90 transition"
+              className="hidden rounded-full bg-slate-950 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-white transition hover:bg-slate-800 sm:inline-flex"
             >
               Get Started
             </Link>
@@ -96,50 +95,52 @@ export default function Navbar() {
 
           <button
             onClick={() => setMobileOpen(!mobileOpen)}
-            className="md:hidden p-2 rounded-lg text-gray-600 dark:text-gray-300"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 md:hidden"
             aria-label="Toggle menu"
           >
-            {mobileOpen ? <X size={20} /> : <Menu size={20} />}
+            {mobileOpen ? <X size={18} /> : <Menu size={18} />}
           </button>
         </div>
       </div>
 
       {mobileOpen && (
-        <div className="md:hidden border-t border-gray-200 dark:border-gray-800 px-4 py-4 flex flex-col gap-4 bg-white dark:bg-[#0B1120]">
-          {navLinks.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              onClick={() => setMobileOpen(false)}
-              className="text-sm font-medium text-gray-600 dark:text-gray-300"
-            >
-              {link.label}
-            </Link>
-          ))}
-
-          {isLoggedIn ? (
-            <>
+        <div className="border-t border-slate-200 bg-white/90 px-4 py-4 md:hidden">
+          <div className="flex flex-col gap-4">
+            {navLinks.map((link) => (
               <Link
-                href="/dashboard"
-                className="px-4 py-2 rounded-lg bg-[#2563EB] text-white text-sm font-medium text-center"
+                key={link.href}
+                href={link.href}
+                onClick={() => setMobileOpen(false)}
+                className="text-[12px] font-medium uppercase tracking-[0.15em] text-slate-600"
               >
-                Go to Dashboard
+                {link.label}
               </Link>
-              <button
-                onClick={handleLogout}
-                className="text-sm font-medium text-gray-600 dark:text-gray-300 text-left"
+            ))}
+
+            {isLoggedIn ? (
+              <>
+                <Link
+                  href="/dashboard"
+                  className="rounded-full bg-slate-950 px-4 py-2 text-center text-[11px] font-semibold uppercase tracking-[0.18em] text-white"
+                >
+                  Go to Dashboard
+                </Link>
+                <button
+                  onClick={handleLogout}
+                  className="text-left text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-600"
+                >
+                  Log out
+                </button>
+              </>
+            ) : (
+              <Link
+                href="/signup"
+                className="rounded-full bg-slate-950 px-4 py-2 text-center text-[11px] font-semibold uppercase tracking-[0.18em] text-white"
               >
-                Log out
-              </button>
-            </>
-          ) : (
-            <Link
-              href="/signup"
-              className="px-4 py-2 rounded-lg bg-[#2563EB] text-white text-sm font-medium text-center"
-            >
-              Get Started
-            </Link>
-          )}
+                Get Started
+              </Link>
+            )}
+          </div>
         </div>
       )}
     </header>

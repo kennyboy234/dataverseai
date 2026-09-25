@@ -1,6 +1,3 @@
-// src\components\marketing\Footer.tsx
-// src\components\marketing\Footer.tsx
-
 import Link from "next/link";
 
 const columns = [
@@ -70,30 +67,30 @@ export default function Footer() {
   const year = new Date().getFullYear();
 
   return (
-    <footer className="border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-[#0B1120]">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-8">
-          <div className="col-span-2 md:col-span-1">
-            <Link href="/" className="text-lg font-bold text-[#111827] dark:text-white">
-              DataVerse <span className="text-[#2563EB]">AI</span>
+    <footer className="border-t border-slate-200 bg-slate-950 text-slate-200">
+      <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
+        <div className="grid gap-8 md:grid-cols-5">
+          <div className="md:col-span-1">
+            <Link href="/" className="inline-flex items-center gap-2 text-lg font-semibold tracking-[-0.05em] text-white">
+              <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-white text-xs font-bold text-slate-950">D</span>
+              DataVerse <span className="text-sky-300">AI</span>
             </Link>
-            <p className="mt-3 text-sm text-gray-500 dark:text-gray-400">
-              The AI-powered data analytics platform that helps you analyze,
-              learn, visualize, and grow.
+            <p className="mt-4 max-w-xs text-sm leading-6 text-slate-400">
+              The AI data operations layer for precise audits, rerun comparisons, and trustworthy reporting.
             </p>
           </div>
 
           {columns.map((col) => (
             <div key={col.title}>
-              <h3 className="text-sm font-semibold text-[#111827] dark:text-white mb-3">
+              <h3 className="mb-4 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">
                 {col.title}
               </h3>
-              <ul className="space-y-2">
+              <ul className="space-y-3">
                 {col.links.map((link) => (
                   <li key={link.href}>
                     <Link
                       href={link.href}
-                      className="text-sm text-gray-500 dark:text-gray-400 hover:text-[#2563EB] transition"
+                      className="text-sm text-slate-400 transition hover:text-white"
                     >
                       {link.label}
                     </Link>
@@ -104,36 +101,16 @@ export default function Footer() {
           ))}
         </div>
 
-        <div className="mt-12 pt-8 border-t border-gray-200 dark:border-gray-800 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            &copy; {year} DataVerse AI. All rights reserved.
-          </p>
-          <div className="flex items-center gap-4">
-            <a
-              href="https://twitter.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="Twitter"
-              className="text-gray-400 hover:text-[#2563EB] transition"
-            >
+        <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-white/10 pt-8 sm:flex-row">
+          <p className="text-sm text-slate-400">&copy; {year} DataVerse AI. All rights reserved.</p>
+          <div className="flex items-center gap-4 text-slate-400">
+            <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" aria-label="Twitter" className="transition hover:text-white">
               <TwitterIcon />
             </a>
-            <a
-              href="https://linkedin.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="LinkedIn"
-              className="text-gray-400 hover:text-[#2563EB] transition"
-            >
+            <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn" className="transition hover:text-white">
               <LinkedinIcon />
             </a>
-            <a
-              href="https://github.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="GitHub"
-              className="text-gray-400 hover:text-[#2563EB] transition"
-            >
+            <a href="https://github.com" target="_blank" rel="noopener noreferrer" aria-label="GitHub" className="transition hover:text-white">
               <GithubIcon />
             </a>
           </div>

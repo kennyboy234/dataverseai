@@ -14,6 +14,7 @@ import FilterBar, { FilterCondition } from "@/components/dashboard/FilterBar";
 import CalculatedColumns from "@/components/dashboard/CalculatedColumns";
 import { applyFilters } from "@/lib/applyFilters";
 import { CalculatedColumn, applyCalculatedColumns } from "@/lib/evaluateFormula";
+import { DatasetManager } from "@/components/workspace/DatasetManager";
 
 export default function DatasetsPage() {
   const [fileName, setFileName] = useState<string | null>(null);
@@ -163,8 +164,20 @@ export default function DatasetsPage() {
           Datasets
         </h1>
         <p className="mt-2 text-gray-600 dark:text-gray-400 mb-6">
-          Upload a file to preview and analyze your data.
+          Switch persistent session files or open a spreadsheet in the detailed analysis workbench.
         </p>
+
+        <div className="mb-6 flex flex-col gap-3 rounded-2xl border border-slate-900/15 bg-white/80 p-4 backdrop-blur-xl sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+              Persistent global session
+            </p>
+            <p className="mt-1 text-sm font-semibold text-slate-600">
+              Upload and switch multiple files without losing the active workspace.
+            </p>
+          </div>
+          <DatasetManager variant="page" />
+        </div>
 
         {!fileName && <UploadZone onFileSelected={handleFile} />}
 

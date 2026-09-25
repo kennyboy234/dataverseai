@@ -1,59 +1,145 @@
 "use client";
 
+import React, { Suspense } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import {
   LayoutDashboard,
-  FolderKanban,
+  Table2,
+  ChartColumn,
+  ShieldCheck,
+  Sparkles,
+  FileText,
   Database,
-  FileBarChart,
-  BarChart3,
   Bot,
-  Settings,
 } from "lucide-react";
+import { useDataset } from "@/components/workspace/DatasetContext";
+import { DatasetManager } from "@/components/workspace/DatasetManager";
 
-const navItems = [
-  { label: "Overview", href: "/dashboard", icon: LayoutDashboard },
-  { label: "Projects", href: "/dashboard/projects", icon: FolderKanban },
-  { label: "Datasets", href: "/dashboard/datasets", icon: Database },
-  { label: "Reports", href: "/dashboard/reports", icon: FileBarChart },
-  { label: "Visualizations", href: "/dashboard/visualizations", icon: BarChart3 },
-  { label: "AI Assistant", href: "/dashboard/ai-assistant", icon: Bot },
-  { label: "Settings", href: "/dashboard/settings", icon: Settings },
+interface NavItem {
+  label: string;
+  href: string;
+  Icon: React.ElementType;
+}
+
+const workspaceItems: NavItem[] = [
+  { label: "Overview", href: "/dashboard", Icon: LayoutDashboard },
+  { label: "Data Grid", href: "/dashboard/workspace?view=grid", Icon: Table2 },
+  { label: "Visualizations", href: "/dashboard/workspace?view=viz", Icon: ChartColumn },
+  { label: "AI Audit & Health", href: "/dashboard/workspace?view=audit", Icon: ShieldCheck },
+  { label: "Natural Language Query", href: "/dashboard/workspace?view=nlq", Icon: Sparkles },
+  { label: "Executive Reports", href: "/dashboard/reports", Icon: FileText },
 ];
 
-export default function Sidebar() {
+const toolItems: NavItem[] = [
+  { label: "Datasets", href: "/dashboard/datasets", Icon: Database },
+  { label: "AI Assistant", href: "/dashboard/ai-assistant", Icon: Bot },
+];
+
+const LABEL_CLASS = "px-2 text-[10px] font-bold uppercase tracking-widest text-slate-400";
+
+function NavList({ items }: { items: NavItem[] }) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const search = searchParams.toString();
+
+  const isActive = (href: string): boolean => {
+    const [path, query] = href.split("?");
+    if (pathname !== path) return false;
+    if (query) return search === query || search.includes(query);
+    return true;
+  };
 
   return (
-    <aside className="w-64 min-h-screen border-r border-gray-200 dark:border-gray-800 bg-white dark:bg-[#111827] px-4 py-6 flex flex-col">
-      <div className="mb-8 px-2">
-        <span className="text-lg font-bold text-[#111827] dark:text-white">
-          DataVerse <span className="text-[#2563EB]">AI</span>
+    <nav className="flex flex-col gap-1">
+      {items.map((item, index) => {
+        const active = isActive(item.href);
+        const Icon = item.Icon;
+        return (
+          <Link
+            key={item.href}
+            href={item.href}
+            aria-current={active ? "page" : undefined}
+            onClick={() => {
+              /* notify an already-open workspace view to switch tabs */
+              if (item.href.startsWith("/dashboard/workspace")) {
+                window.dispatchEvent(new CustomEvent("dataverse:workspace-nav"));
+              }
+            }}
+            className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-bold transition-colors ${
+              active
+                ? "bg-slate-900 text-white shadow-sm"
+                : index % 2 === 1
+                ? "bg-slate-900/[0.03] text-slate-600 hover:bg-slate-900/[0.07] hover:text-slate-900"
+                : "text-slate-600 hover:bg-slate-900/[0.07] hover:text-slate-900"
+            }`}
+          >
+            <Icon className="h-4 w-4 shrink-0" />
+            <span className="truncate">{item.label}</span>
+          </Link>
+        );
+      })}
+    </nav>
+  );
+}
+
+function SidebarInner() {
+  const { fileName, data, hydrated, datasets } = useDataset();
+
+  return (
+    <aside className="flex min-h-screen w-64 shrink-0 flex-col gap-6 border-r border-slate-900/15 bg-white/80 px-4 py-6 backdrop-blur-xl">
+      <div className="px-2">
+        <span className="text-lg font-bold text-slate-900">
+          DataVerse <span className="text-sky-600">AI</span>
         </span>
+        <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-slate-400">
+          Enterprise workspace
+        </p>
       </div>
 
-      <nav className="flex flex-col gap-1">
-        {navItems.map((item) => {
-          const isActive = pathname === item.href;
-          const Icon = item.icon;
+      <div className="flex flex-col gap-4">
+        <p className={LABEL_CLASS}>Workspace</p>
+        <NavList items={workspaceItems} />
+      </div>
 
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition ${
-                isActive
-                  ? "bg-[#2563EB]/10 text-[#2563EB]"
-                  : "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
-              }`}
-            >
-              <Icon size={18} />
-              {item.label}
-            </Link>
-          );
-        })}
-      </nav>
+      <div className="flex flex-col gap-4">
+        <p className={LABEL_CLASS}>Tools</p>
+        <NavList items={toolItems} />
+      </div>
+
+      <div className="mt-auto rounded-2xl border border-slate-900/15 bg-white/80 p-4 backdrop-blur-xl">
+        <p className={LABEL_CLASS}>Active dataset</p>
+        {hydrated && data ? (
+          <>
+            <p className="mt-1.5 truncate text-sm font-bold text-slate-900">
+              {fileName ?? "Untitled dataset"}
+            </p>
+            <p className="mt-0.5 text-xs font-semibold text-slate-500">
+              {data.length.toLocaleString()} rows loaded · {datasets.length} {datasets.length === 1 ? "file" : "files"} in session
+            </p>
+          </>
+        ) : (
+          <>
+            <p className="mt-1.5 text-sm font-bold text-slate-900">No dataset</p>
+            <p className="mt-0.5 text-xs font-semibold text-slate-500">
+              Upload once — it persists everywhere.
+            </p>
+          </>
+        )}
+        <DatasetManager variant="sidebar" className="mt-3" />
+      </div>
     </aside>
+  );
+}
+
+export default function Sidebar() {
+  return (
+    <Suspense
+      fallback={
+        <aside className="min-h-screen w-64 shrink-0 border-r border-slate-900/15 bg-white/80 backdrop-blur-xl" />
+      }
+    >
+      <SidebarInner />
+    </Suspense>
   );
 }
