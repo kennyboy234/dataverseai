@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { X, Sigma, FlaskConical, ListChecks, Copy, Check, TrendingUp } from "lucide-react";
 import { useDataset } from "@/components/workspace/DatasetContext";
+import { useAuditTrail } from "@/components/workspace/AuditTrailContext";
 import {
   buildDesignMatrix,
   runOLS,
@@ -345,6 +346,83 @@ export const AdvancedEconometricsModal: React.FC<AdvancedEconometricsModalProps>
       return null;
     }
   }, [tab, open, rows, activeItems]);
+
+  /* Lightweight audit trail: record each finished run (read-only logging only;
+     it never changes how any model computes or reports its result). */
+  const { logEntry } = useAuditTrail();
+  const lastLoggedRef = useRef<string>("");
+
+  useEffect(() => {
+    if (!open) {
+      lastLoggedRef.current = "";
+      return;
+    }
+
+    let fingerprint = "";
+    let testType = "";
+    let summary = "";
+
+    if (tab === "ols" && ols) {
+      fingerprint = [
+        "ols",
+        activeSheetLabel,
+        activeY,
+        xColumns.join("|"),
+        ols.n,
+        ols.rSquared.toFixed(6),
+      ].join("::");
+      testType = "OLS Regression";
+      summary =
+        `Settings: Y = ${activeY}, X = [${xColumns.join(", ")}] · ` +
+        `Result: R² = ${ols.rSquared.toFixed(4)}, adj. R² = ${ols.adjRSquared.toFixed(4)}, ` +
+        `F(${ols.k - 1}, ${ols.n - ols.k}) = ${ols.fStat.toFixed(3)}, ` +
+        `p = ${fmtP(ols.fPValue)}, n = ${ols.n.toLocaleString()}.`;
+    } else if (tab === "hausman" && hausman) {
+      fingerprint = [
+        "hausman",
+        activeSheetLabel,
+        activeY,
+        activeEntity,
+        xColumns.join("|"),
+        hausman.n,
+        hausman.chiSquare.toFixed(6),
+      ].join("::");
+      testType = "Hausman Test";
+      summary =
+        `Settings: Y = ${activeY}, X = [${xColumns.join(", ")}], entity = ${activeEntity} · ` +
+        `Result: χ²(${hausman.df}) = ${hausman.chiSquare.toFixed(3)}, p = ${fmtP(hausman.pValue)}, ` +
+        `${hausman.groups} groups, n = ${hausman.n.toLocaleString()}.`;
+    } else if (tab === "cronbach" && cronbach) {
+      fingerprint = [
+        "cronbach",
+        activeSheetLabel,
+        activeItems.join("|"),
+        cronbach.respondents,
+        cronbach.alpha.toFixed(6),
+      ].join("::");
+      testType = "Cronbach's Alpha";
+      summary =
+        `Settings: items = [${activeItems.join(", ")}] · ` +
+        `Result: α = ${cronbach.alpha.toFixed(4)} (${cronbach.interpretation}), ` +
+        `${cronbach.items} items, n = ${cronbach.respondents.toLocaleString()}.`;
+    }
+
+    if (!fingerprint || lastLoggedRef.current === fingerprint) return;
+    lastLoggedRef.current = fingerprint;
+    logEntry({ sheetName: activeSheetLabel, testType, summary });
+  }, [
+    activeEntity,
+    activeItems,
+    activeSheetLabel,
+    activeY,
+    cronbach,
+    hausman,
+    logEntry,
+    ols,
+    open,
+    tab,
+    xColumns,
+  ]);
 
   const interpretation = useMemo<string>(() => {
     if (tab === "ols" && ols) {

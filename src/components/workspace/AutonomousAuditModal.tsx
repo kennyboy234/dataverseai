@@ -15,6 +15,7 @@ import {
   X,
 } from "lucide-react";
 import { useDataset } from "@/components/workspace/DatasetContext";
+import { useAuditTrail } from "@/components/workspace/AuditTrailContext";
 import {
   runAutonomousAudit,
   type AuditEngineReport,
@@ -483,6 +484,49 @@ export const AutonomousAuditModal: React.FC<AutonomousAuditModalProps> = ({
       now: new Date(),
     });
   }, [open, rows, scanLimit, varianceThresholdPercent, runVersion]);
+
+  /* Lightweight audit trail: record finished runs after the result exists.
+     This is read-only logging; it never changes the audit computation. */
+  const { logEntry } = useAuditTrail();
+  const lastLoggedRef = useRef<string>("");
+
+  useEffect(() => {
+    if (!open) {
+      lastLoggedRef.current = "";
+      return;
+    }
+    if (!report) return;
+
+    const sheetName = activeSheet?.name ?? "active worksheet";
+    const fingerprint = [
+      sheetName,
+      scanLimit,
+      varianceThresholdPercent,
+      report.riskScore.toFixed(4),
+      report.complianceScore.toFixed(4),
+      report.scannedRows,
+      report.findings.length,
+    ].join("::");
+    if (lastLoggedRef.current === fingerprint) return;
+    lastLoggedRef.current = fingerprint;
+
+    logEntry({
+      sheetName,
+      testType: "Autonomous Audit",
+      summary:
+        `Settings: max rows = ${scanLimit.toLocaleString()}, variance threshold = ${varianceThresholdPercent}% · ` +
+        `Result: ${report.riskScore.toFixed(0)}/100 risk (${report.riskLevel}), ` +
+        `${report.complianceScore.toFixed(0)}/100 compliance, ${report.auditStatus} · ` +
+        `${report.findings.length} finding(s), ${report.scannedRows.toLocaleString()} of ${report.rowCount.toLocaleString()} rows scanned.`,
+    });
+  }, [
+    activeSheet?.name,
+    logEntry,
+    open,
+    report,
+    scanLimit,
+    varianceThresholdPercent,
+  ]);
 
   useEffect(() => {
     if (!open) return;
