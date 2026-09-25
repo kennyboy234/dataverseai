@@ -251,8 +251,6 @@ const workbookFromSheets = (
     return sheetFromMatrix(matrix, name, id, index, mergedRanges);
   });
 
-  console.log("[DataVerse DEBUG] SheetNames from XLSX.read:", workbook.SheetNames.length, workbook.SheetNames);
-
   if (sheets.length === 0) {
     throw new Error(`${fileName} does not contain a worksheet.`);
   }
