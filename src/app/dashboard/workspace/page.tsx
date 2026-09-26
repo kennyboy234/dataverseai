@@ -20,8 +20,6 @@ import { AdvancedEconometricsModal, type EconTab } from "@/components/workspace/
 import { StatisticalCatalogModal, type StatisticalTestDefinition } from "@/components/workspace/StatisticalCatalogModal";
 import { AutonomousAuditModal } from "@/components/workspace/AutonomousAuditModal";
 import { NLQEngine } from "@/components/workspace/NLQEngine";
-import { ReportExportModal } from "@/components/workspace/ReportExportModal";
-import { ReportStudio } from "@/components/workspace/ReportStudio";
 import { CrossSheetCompareModal } from "@/components/workspace/CrossSheetCompareModal";
 import { AuditTrailProvider } from "@/components/workspace/AuditTrailContext";
 import { AuditTrailModal } from "@/components/workspace/AuditTrailModal";
@@ -59,7 +57,6 @@ function WorkspaceContent() {
   const [econTab, setEconTab] = useState<EconTab>("ols");
   const [catalogOpen, setCatalogOpen] = useState(false);
   const [auditOpen, setAuditOpen] = useState(false);
-  const [reportOpen, setReportOpen] = useState(false);
   const [compareOpen, setCompareOpen] = useState(false);
   const [trailOpen, setTrailOpen] = useState(false);
   const [notesOpen, setNotesOpen] = useState(false);
@@ -76,9 +73,8 @@ function WorkspaceContent() {
     window.addEventListener(NAV_EVENT, sync); window.addEventListener("popstate", sync);
     return () => { window.removeEventListener(NAV_EVENT, sync); window.removeEventListener("popstate", sync); };
   }, [readView]);
-  const navigateTo = useCallback((target: WorkspaceView) => { setView(target); router.replace(`/dashboard/workspace?view=${target}`); }, [router]);
-  const closeReport = useCallback(() => { setReportOpen(false); if (view === "report") navigateTo("grid"); }, [navigateTo, view]);
-  const openReport = useCallback(() => { setReportOpen(true); navigateTo("report"); }, [navigateTo]);
+  const navigateTo = useCallback((target: WorkspaceView) => { if (target === "report") { router.push("/dashboard/reports"); return; } setView(target); router.replace(`/dashboard/workspace?view=${target}`); }, [router]);
+  const openReport = useCallback(() => { navigateTo("report"); }, [navigateTo]);
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => { if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") { event.preventDefault(); setPaletteOpen((current) => !current); } };
     window.addEventListener("keydown", onKeyDown); return () => window.removeEventListener("keydown", onKeyDown);
@@ -123,9 +119,8 @@ function WorkspaceContent() {
       {view === "viz" && <ChartEngine data={data} onConfigChange={updateChartConfig} />}
       {view === "audit" && <div className="space-y-6"><div className="flex flex-wrap gap-2"><button onClick={() => setRepairOpen(true)} className="inline-flex items-center gap-2 rounded-xl border bg-white px-3 py-2 text-sm font-semibold"><Wand2 className="h-4 w-4" />Smart Repair</button><button onClick={() => setCodeOpen(true)} className="inline-flex items-center gap-2 rounded-xl border bg-white px-3 py-2 text-sm font-semibold"><Code2 className="h-4 w-4" />Export Pipeline Code</button><button onClick={() => openEconometrics("ols")} className="inline-flex items-center gap-2 rounded-xl border bg-white px-3 py-2 text-sm font-semibold"><Sigma className="h-4 w-4" />Econometrics Suite</button><button onClick={() => setAuditOpen(true)} className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-3 py-2 text-sm font-semibold text-white"><ShieldCheck className="h-4 w-4" />Autonomous Audit</button></div><AuditEngine data={activeAnalysisRows} onDataCleaned={cleanData} /><StatisticalSummary data={activeAnalysisRows} /><ScatterMatrix data={activeAnalysisRows} /></div>}
       {view === "nlq" && <NLQEngine key={activeSheetId ?? "no-sheet"} data={activeAnalysisRows} activeFilter={filterLabel} onApplyQuery={handleQueryApplied} onClearFilter={clearFilter} />}
-      {view === "report" && <ReportStudio data={data ?? []} fileName={fileName} activeFilter={filterLabel} activeSheetName={activeSheetName} executionScope={executionScope} onOpenExport={openReport} />}
     </> : <div className="flex min-h-[400px] flex-col items-center justify-center"><FileUploader onDataLoaded={loadDataset} /></div>}
-    <PersonaOnboardingModal open={personaOpen} onClose={() => setPersonaOpen(false)} onTrackSelected={onPersonaTrack} /><CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} onNavigate={(target) => navigateTo(target as WorkspaceView)} onExportReport={openReport} onDownloadData={downloadCsv} onCopyData={copyData} onClearFilter={clearFilter} onOpenStatisticalCatalog={() => setCatalogOpen(true)} hasFilter={filterLabel !== null} hasData={data !== null} /><DatasetJoinModal open={joinOpen} onClose={() => setJoinOpen(false)} /><SmartRepairModal open={repairOpen} onClose={() => setRepairOpen(false)} /><CodeExportModal open={codeOpen} onClose={() => setCodeOpen(false)} /><LiveConnectorsModal open={liveOpen} onClose={() => setLiveOpen(false)} /><StatisticalCatalogModal open={catalogOpen} onClose={() => setCatalogOpen(false)} onLaunch={launchTest} hasData={activeAnalysisRows.length > 0} /><AdvancedEconometricsModal open={econOpen} onClose={() => setEconOpen(false)} initialTab={econTab} /><AutonomousAuditModal open={auditOpen} onClose={() => setAuditOpen(false)} /><CrossSheetCompareModal open={compareOpen} onClose={() => setCompareOpen(false)} /><AuditTrailModal open={trailOpen} onClose={() => setTrailOpen(false)} /><TeamNotesModal open={notesOpen} onClose={() => setNotesOpen(false)} /><ReportExportModal open={reportOpen} onClose={closeReport} data={data ?? []} fileName={fileName} activeFilter={filterLabel} initialMode={activeTrackId === "executive" || activeTrackId === "auditor" ? "executive" : "academic"} />
+    <PersonaOnboardingModal open={personaOpen} onClose={() => setPersonaOpen(false)} onTrackSelected={onPersonaTrack} /><CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} onNavigate={(target) => navigateTo(target as WorkspaceView)} onExportReport={openReport} onDownloadData={downloadCsv} onCopyData={copyData} onClearFilter={clearFilter} onOpenStatisticalCatalog={() => setCatalogOpen(true)} hasFilter={filterLabel !== null} hasData={data !== null} /><DatasetJoinModal open={joinOpen} onClose={() => setJoinOpen(false)} /><SmartRepairModal open={repairOpen} onClose={() => setRepairOpen(false)} /><CodeExportModal open={codeOpen} onClose={() => setCodeOpen(false)} /><LiveConnectorsModal open={liveOpen} onClose={() => setLiveOpen(false)} /><StatisticalCatalogModal open={catalogOpen} onClose={() => setCatalogOpen(false)} onLaunch={launchTest} hasData={activeAnalysisRows.length > 0} /><AdvancedEconometricsModal open={econOpen} onClose={() => setEconOpen(false)} initialTab={econTab} /><AutonomousAuditModal open={auditOpen} onClose={() => setAuditOpen(false)} /><CrossSheetCompareModal open={compareOpen} onClose={() => setCompareOpen(false)} /><AuditTrailModal open={trailOpen} onClose={() => setTrailOpen(false)} /><TeamNotesModal open={notesOpen} onClose={() => setNotesOpen(false)} />
   </div></DashboardLayout>;
 }
 
