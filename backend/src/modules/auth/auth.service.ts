@@ -3,6 +3,7 @@
 // backend/src/modules/auth/auth.service.ts
 
 import { supabase } from "../../lib/supabase.js";
+import { createUserClient } from "../../lib/supabaseUserClient.js";
 import { logger } from "../../lib/logger.js";
 import { env } from "../../config/env.js";
 
@@ -169,8 +170,13 @@ class AuthService {
   async login(data: LoginInput) {
     const { email, password } = data;
 
+    // Sign in on a throwaway anon client. signInWithPassword stores a
+    // session on the client instance, which would otherwise downgrade
+    // the shared admin singleton from service_role to this user's role
+    // for the rest of the process. The profile lookup below still uses
+    // the admin client on purpose — it must bypass RLS.
     const { data: signInData, error: signInError } =
-      await supabase.auth.signInWithPassword({ email, password });
+      await createUserClient().auth.signInWithPassword({ email, password });
 
     if (signInError) {
       // Supabase returns a generic message for both "wrong password"
@@ -362,9 +368,12 @@ email_verified
   async refreshSession(data: RefreshTokenInput) {
     const { refreshToken } = data;
 
-    const { data: sessionData, error } = await supabase.auth.refreshSession({
-      refresh_token: refreshToken,
-    });
+    // Same reason as login(): refreshSession writes a session onto the
+    // client instance, so it must never run on the shared admin client.
+    const { data: sessionData, error } =
+      await createUserClient().auth.refreshSession({
+        refresh_token: refreshToken,
+      });
 
     if (error || !sessionData.session) {
       throw new ApiError("Refresh token expired.", HTTP_STATUS.UNAUTHORIZED);
