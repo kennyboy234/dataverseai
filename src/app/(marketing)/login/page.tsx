@@ -6,6 +6,7 @@ import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Sparkles, Lock, ArrowRight, ShieldCheck } from "lucide-react";
+import { AuthService } from "@/services/auth.service";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const LAST_EMAIL_KEY = "dataverse:lastEmail";
@@ -37,7 +38,7 @@ export default function LoginPage() {
     }
   }, [router]);
 
-  function handleSubmit(event: React.FormEvent) {
+  async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     setError("");
 
@@ -52,28 +53,21 @@ export default function LoginPage() {
 
     setLoading(true);
     try {
-      /* Local, network-free authentication: never throws "Failed to fetch" */
-      const issuedAt = Date.now();
-      const subject = btoa(email.toLowerCase().trim()).replace(/=+$/, "");
-      const accessToken = `local.session.${subject}.${issuedAt}`;
-      const refreshToken = `local.refresh.${subject}.${issuedAt}`;
+      const res = await AuthService.login({ email, password });
 
-      try {
-        window.localStorage.setItem("accessToken", accessToken);
-        window.localStorage.setItem("refreshToken", refreshToken);
-        window.localStorage.setItem("dataverse:user", email.trim());
-        if (remember) {
-          window.localStorage.setItem(LAST_EMAIL_KEY, email.trim());
-        } else {
-          window.localStorage.removeItem(LAST_EMAIL_KEY);
-        }
-      } catch {
-        /* private-browsing storage limits — continue, ProtectedRoute may re-prompt */
+      window.localStorage.setItem("accessToken", res.data.session.accessToken);
+      window.localStorage.setItem("refreshToken", res.data.session.refreshToken);
+      window.localStorage.setItem("dataverse:user", res.data.user.email);
+
+      if (remember) {
+        window.localStorage.setItem(LAST_EMAIL_KEY, email.trim());
+      } else {
+        window.localStorage.removeItem(LAST_EMAIL_KEY);
       }
 
       router.push("/dashboard");
-    } catch {
-      setError("Unable to start a session on this device. Please try again.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Invalid email or password.");
       setLoading(false);
     }
   }
