@@ -2,7 +2,7 @@
 
 import React, { Suspense } from "react";
 import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   LayoutDashboard,
   Table2,
@@ -12,9 +12,11 @@ import {
   FileText,
   Database,
   Bot,
+  LogOut,
 } from "lucide-react";
 import { useDataset } from "@/components/workspace/DatasetContext";
 import { DatasetManager } from "@/components/workspace/DatasetManager";
+import { AuthService } from "@/services/auth.service";
 
 interface NavItem {
   label: string;
@@ -85,6 +87,20 @@ function NavList({ items }: { items: NavItem[] }) {
 
 function SidebarInner() {
   const { fileName, data, hydrated, datasets } = useDataset();
+  const router = useRouter();
+
+  async function handleLogout() {
+    const accessToken = localStorage.getItem("accessToken");
+    try {
+      if (accessToken) await AuthService.logout(accessToken);
+    } catch {
+      /* backend logout failed — local logout still proceeds */
+    }
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("refreshToken");
+    localStorage.removeItem("dataverse:user");
+    router.push("/login");
+  }
 
   return (
     <aside className="flex min-h-screen w-64 shrink-0 flex-col gap-6 border-r border-slate-900/15 bg-white/80 px-4 py-6 backdrop-blur-xl">
@@ -128,6 +144,15 @@ function SidebarInner() {
         )}
         <DatasetManager variant="sidebar" className="mt-3" />
       </div>
+
+      <button
+        type="button"
+        onClick={handleLogout}
+        className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-bold text-slate-600 transition-colors hover:bg-slate-900/[0.07] hover:text-slate-900"
+      >
+        <LogOut className="h-4 w-4 shrink-0" />
+        <span className="truncate">Log out</span>
+      </button>
     </aside>
   );
 }

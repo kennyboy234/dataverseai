@@ -9,6 +9,7 @@
 import Link from "next/link";
 import { Menu, Moon, Sun, X } from "lucide-react";
 import { useEffect, useState } from "react";
+import { AuthService } from "@/services/auth.service";
 
 const navLinks = [
   { label: "Home", href: "/" },
@@ -33,7 +34,13 @@ export default function Navbar() {
     setIsDark(document.documentElement.classList.contains("dark"));
   }
 
-  function handleLogout() {
+  async function handleLogout() {
+    const accessToken = localStorage.getItem("accessToken");
+    try {
+      if (accessToken) await AuthService.logout(accessToken);
+    } catch {
+      /* backend logout failed — local logout still proceeds */
+    }
     localStorage.removeItem("accessToken");
     localStorage.removeItem("refreshToken");
     setIsLoggedIn(false);
