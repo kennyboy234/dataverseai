@@ -25,13 +25,15 @@ export const createDatasetSchema = z.object({
 
   sheet_name: z.string().trim().max(255).optional(),
 
-  columns: z.array(z.string()).min(1),
+  sheets: z.array(z.record(z.string(), z.unknown())).min(1),
 
-  rows: z.array(z.record(z.string(), z.unknown())),
+  active_sheet_id: z.string().trim().min(1),
 
   filters: z.array(filterConditionSchema).optional().default([]),
 
   calculated_columns: z.array(calculatedColumnSchema).optional().default([]),
 });
+
+export const updateDatasetSchema = createDatasetSchema.partial();
 
 export type CreateDatasetInput = z.infer<typeof createDatasetSchema>;

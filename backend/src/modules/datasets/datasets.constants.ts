@@ -7,9 +7,17 @@ export const DATASET_MESSAGES = {
   
     DATASET_FETCHED: "Dataset fetched successfully.",
   
+    DATASET_UPDATED: "Dataset updated successfully.",
+  
+    DATASET_DELETED: "Dataset deleted successfully.",
+  
     DATASET_NOT_FOUND: "Dataset not found.",
   
     DATASET_SAVE_FAILED: "Failed to save dataset.",
+  
+    DATASET_UPDATE_FAILED: "Failed to update dataset.",
+  
+    DATASET_DELETE_FAILED: "Failed to delete dataset.",
   
     DATASET_FETCH_FAILED: "Failed to fetch dataset.",
   

@@ -23,8 +23,8 @@ class DatasetsService {
         name: input.name,
         file_name: input.file_name,
         sheet_name: input.sheet_name ?? null,
-        columns: input.columns,
-        rows: input.rows,
+        sheets: input.sheets,
+        active_sheet_id: input.active_sheet_id,
         filters: input.filters ?? [],
         calculated_columns: input.calculated_columns ?? [],
       })
@@ -75,7 +75,7 @@ class DatasetsService {
     const { data: dataset, error } = await supabase
       .from("datasets")
       .select(
-        "id, name, file_name, sheet_name, columns, rows, filters, calculated_columns, created_at, updated_at",
+        "id, name, file_name, sheet_name, sheets, active_sheet_id, filters, calculated_columns, created_at, updated_at",
       )
       .eq("id", datasetId)
       .eq("user_id", userId)
@@ -98,6 +98,82 @@ class DatasetsService {
     }
 
     return successResponse(DATASET_MESSAGES.DATASET_FETCHED, { dataset });
+  }
+
+  async updateDataset(
+    userId: string,
+    datasetId: string,
+    input: Partial<CreateDatasetInput>,
+  ) {
+    if (!UUID_REGEX.test(datasetId)) {
+      throw new ApiError(
+        DATASET_MESSAGES.DATASET_NOT_FOUND,
+        HTTP_STATUS.NOT_FOUND,
+      );
+    }
+
+    const { data: dataset, error } = await supabase
+      .from("datasets")
+      .update(input)
+      .eq("id", datasetId)
+      .eq("user_id", userId)
+      .select(
+        "id, name, file_name, sheet_name, sheets, active_sheet_id, filters, calculated_columns, created_at, updated_at",
+      )
+      .single();
+
+    if (error) {
+      if (error.code === "PGRST116") {
+        throw new ApiError(
+          DATASET_MESSAGES.DATASET_NOT_FOUND,
+          HTTP_STATUS.NOT_FOUND,
+        );
+      }
+
+      logger.error(error);
+
+      throw new ApiError(
+        DATASET_MESSAGES.DATASET_UPDATE_FAILED,
+        HTTP_STATUS.INTERNAL_SERVER_ERROR,
+      );
+    }
+
+    if (!dataset) {
+      throw new ApiError(
+        DATASET_MESSAGES.DATASET_NOT_FOUND,
+        HTTP_STATUS.NOT_FOUND,
+      );
+    }
+
+    return successResponse(DATASET_MESSAGES.DATASET_UPDATED, { dataset });
+  }
+
+  async deleteDataset(userId: string, datasetId: string) {
+    if (!UUID_REGEX.test(datasetId)) {
+      throw new ApiError(
+        DATASET_MESSAGES.DATASET_NOT_FOUND,
+        HTTP_STATUS.NOT_FOUND,
+      );
+    }
+
+    const { error } = await supabase
+      .from("datasets")
+      .delete()
+      .eq("id", datasetId)
+      .eq("user_id", userId);
+
+    if (error) {
+      logger.error(error);
+
+      throw new ApiError(
+        DATASET_MESSAGES.DATASET_DELETE_FAILED,
+        HTTP_STATUS.INTERNAL_SERVER_ERROR,
+      );
+    }
+
+    return successResponse(DATASET_MESSAGES.DATASET_DELETED, {
+      id: datasetId,
+    });
   }
 }
 

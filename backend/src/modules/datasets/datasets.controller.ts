@@ -37,3 +37,30 @@ export const getDataset = asyncHandler(
     res.json(result);
   },
 );
+
+export const updateDataset = asyncHandler(
+  async (req: Request, res: Response) => {
+    const datasetId = req.params.id as string;
+
+    const result = await datasetsService.updateDataset(
+      req.user!.id,
+      datasetId,
+      req.body,
+    );
+
+    res.json(result);
+  },
+);
+
+export const deleteDataset = asyncHandler(
+  async (req: Request, res: Response) => {
+    const datasetId = req.params.id as string;
+
+    const result = await datasetsService.deleteDataset(
+      req.user!.id,
+      datasetId,
+    );
+
+    res.json(result);
+  },
+);
