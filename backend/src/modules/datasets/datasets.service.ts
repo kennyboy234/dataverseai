@@ -19,6 +19,7 @@ class DatasetsService {
     const { data: dataset, error } = await supabase
       .from("datasets")
       .insert({
+        ...(input.id ? { id: input.id } : {}),
         user_id: userId,
         name: input.name,
         file_name: input.file_name,
