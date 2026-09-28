@@ -179,6 +179,14 @@ class AuthService {
       await createUserClient().auth.signInWithPassword({ email, password });
 
     if (signInError) {
+      logger.warn(
+        {
+          code: signInError.code,
+          status: signInError.status,
+          message: signInError.message,
+        },
+        "signInWithPassword rejected",
+      );
       // Supabase returns a generic message for both "wrong password"
       // and "user doesn't exist" — keep ours generic too, on purpose,
       // to avoid leaking which emails are registered.
